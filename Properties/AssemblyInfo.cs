@@ -15,7 +15,7 @@ using MelonLoader;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-[assembly: MelonInfo(typeof(ShadowLegend_bhaptics.ShadowLegend_bhaptics), "ShadowLegend_bhaptics", "1.0", "Florian Fahrenberger")]
+[assembly: MelonInfo(typeof(ShadowLegend_bhaptics.ShadowLegend_bhaptics), "ShadowLegend_bhaptics", "1.2", "Florian Fahrenberger")]
 [assembly: MelonGame("VitruviusVR", "ShadowLegendVR")]
 
 // Durch Festlegen von ComVisible auf FALSE werden die Typen in dieser Assembly

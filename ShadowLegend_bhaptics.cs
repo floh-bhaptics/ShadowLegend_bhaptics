@@ -18,6 +18,8 @@ namespace ShadowLegend_bhaptics
         private static PlayerHand rightHand;
         private static bool weaponRightHand = true;
         private static bool arrowFromCrossBow = false;
+        private static bool staffRightHand = true;
+        private static bool rightFoot = true;
 
 
         public override void OnApplicationStart()
@@ -121,6 +123,38 @@ namespace ShadowLegend_bhaptics
             }
         }
 
+        [HarmonyPatch(typeof(PlayerWeapon), "InteractionStart", new Type[] { typeof(InteractableObject), typeof(PlayerHand) })]
+        public class bhaptics_WeaponInteract
+        {
+            [HarmonyPostfix]
+            public static void Postfix(PlayerWeapon __instance, InteractableObject interactableObject, PlayerHand hand)
+            {
+                if ((interactableObject.IsMeleeWeapon) | (interactableObject.IsRangeWeapon))
+                {
+                    bool isRightHand = hand.Equals(rightHand);
+                    float weaponSpeed = __instance.WeaponTipVelocity.magnitude;
+                    float intensity = Math.Min(((weaponSpeed / 80f) + 0.5f), 1.0f);
+                    tactsuitVr.Recoil("Blade", isRightHand, intensity);
+                }
+                else
+                {
+                    tactsuitVr.LOG("Weapon interact with: " + interactableObject.name);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Staff), "TriggerButtonDown", new Type[] { typeof(PlayerHand) })]
+        public class bhaptics_ShootStaff
+        {
+            [HarmonyPostfix]
+            public static void Postfix(Staff __instance, PlayerHand hand)
+            {
+                bool isRightHand = hand.Equals(rightHand);
+                staffRightHand = isRightHand;
+                if (__instance.IsReadyToShoot) { tactsuitVr.Recoil("Blade", isRightHand); }
+            }
+        }
+
         #endregion
 
         #region Player damage
@@ -139,7 +173,7 @@ namespace ShadowLegend_bhaptics
             if (earlycrossProduct.y > 0f) { earlyhitAngle *= -1f; }
             tactsuitVr.LOG("EarlyHitAngle: " + earlyhitAngle.ToString());
             float myRotation = earlyhitAngle - playerDir.y;
-            //myRotation *= -1f;
+            myRotation *= -1f;
             if (myRotation < 0f) { myRotation = 360f + myRotation; }
             tactsuitVr.LOG("mHitAngle: " + myRotation.ToString());
 
@@ -196,6 +230,17 @@ namespace ShadowLegend_bhaptics
             }
         }
 
+        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "BurningStart", new Type[] { typeof(IncendiaryObject) })]
+        public class bhaptics_Burning
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("Burning");
+                tactsuitVr.LOG("BurningStart");
+            }
+        }
+
         #endregion
 
         [HarmonyPatch(typeof(HealthNumber), "HealthChange", new Type[] { typeof(int) })]
@@ -210,16 +255,47 @@ namespace ShadowLegend_bhaptics
             }
         }
 
-        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "BurningStart", new Type[] { typeof(IncendiaryObject) })]
-        public class bhaptics_Burning
+        [HarmonyPatch(typeof(PlayerMovementController), "FallLandCoroutine", new Type[] {  })]
+        public class bhaptics_FallLand
         {
             [HarmonyPostfix]
             public static void Postfix()
             {
-                tactsuitVr.PlaybackHaptics("Burning");
-                tactsuitVr.LOG("BurningStart");
+                tactsuitVr.PlaybackHaptics("FallDamage");
+                tactsuitVr.PlaybackHaptics("FallDamageFeet");
             }
         }
+
+        [HarmonyPatch(typeof(PlayerMovementController), "FootStep", new Type[] { typeof(bool) })]
+        public class bhaptics_FootStep
+        {
+            [HarmonyPostfix]
+            public static void Postfix(bool landingFromFalling)
+            {
+                if (rightFoot)
+                {
+                    tactsuitVr.PlaybackHaptics("FootStep_R");
+                    rightFoot = false;
+                }
+                else
+                {
+                    tactsuitVr.PlaybackHaptics("FootStep_L");
+                    rightFoot = true;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerMovementController), "PlayerHandInteracting", new Type[] { typeof(PlayerHand) })]
+        public class bhaptics_PlayerHandInteract
+        {
+            [HarmonyPostfix]
+            public static void Postfix(PlayerHand hand)
+            {
+                if (hand.Equals(rightHand)) { tactsuitVr.PlaybackHaptics("TouchHands_R"); tactsuitVr.PlaybackHaptics("Recoil_R", 0.5f); }
+                else { tactsuitVr.PlaybackHaptics("TouchHands_L"); tactsuitVr.PlaybackHaptics("Recoil_L", 0.5f); }
+            }
+        }
+
 
     }
 }
