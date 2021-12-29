@@ -320,6 +320,16 @@ namespace ShadowLegend_bhaptics
             }
         }
 
+        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "FallInLava", new Type[] {  })]
+        public class bhaptics_FallInLava
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("Burning");
+            }
+        }
+
         [HarmonyPatch(typeof(VitruviusVR.Eatable), "Eat", new Type[] {  })]
         public class bhaptics_Eating
         {
