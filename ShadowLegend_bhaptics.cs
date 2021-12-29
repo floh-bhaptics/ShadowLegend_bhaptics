@@ -165,24 +165,28 @@ namespace ShadowLegend_bhaptics
             Vector3 patternOrigin = new Vector3(0f, 0f, 1f);
             // y is "up", z is "forward" in local coordinates
             Vector3 hitPosition = hit - player.position;
-            Quaternion PlayerRotation = player.rotation;
-            Vector3 playerDir = PlayerRotation.eulerAngles;
+            //tactsuitVr.LOG("Relative x-z-position: " + hitPosition.x.ToString() + " " + hitPosition.z.ToString());
+            Quaternion myPlayerRotation = player.rotation;
+            Vector3 playerDir = myPlayerRotation.eulerAngles;
+            //tactsuitVr.LOG("PlayerDir: " + playerDir.y.ToString());
+            //tactsuitVr.LOG("PlayerRot: " + playerRotation.ToString());
             Vector3 flattenedHit = new Vector3(hitPosition.x, 0f, hitPosition.z);
             float earlyhitAngle = Vector3.Angle(flattenedHit, patternOrigin);
             Vector3 earlycrossProduct = Vector3.Cross(flattenedHit, patternOrigin);
             if (earlycrossProduct.y > 0f) { earlyhitAngle *= -1f; }
-            tactsuitVr.LOG("EarlyHitAngle: " + earlyhitAngle.ToString());
+            //tactsuitVr.LOG("EarlyHitAngle: " + earlyhitAngle.ToString());
+            //float myRotation = earlyhitAngle - playerRotation;
             float myRotation = earlyhitAngle - playerDir.y;
             myRotation *= -1f;
             if (myRotation < 0f) { myRotation = 360f + myRotation; }
-            tactsuitVr.LOG("mHitAngle: " + myRotation.ToString());
+            //tactsuitVr.LOG("myHitAngle: " + myRotation.ToString());
 
 
             float hitShift = hitPosition.y;
-            tactsuitVr.LOG("HitShift: " + hitShift.ToString());
-            if (hitShift > 1.8f) { hitShift = 0.5f; }
-            else if (hitShift < 1.0f) { hitShift = -0.5f; }
-            else { hitShift = (hitShift - 1.0f) / 0.8f - 0.5f; }
+            //tactsuitVr.LOG("HitShift: " + hitShift.ToString());
+            if (hitShift > 0f) { hitShift = 0.5f; }
+            else if (hitShift < -0.5f) { hitShift = -0.5f; }
+            else { hitShift = (hitShift + 0.5f) * 2f - 0.5f; }
             //tactsuitVr.LOG("HitShift: " + hitShift.ToString());
             //tactsuitVr.LOG(" ");
 
@@ -193,16 +197,22 @@ namespace ShadowLegend_bhaptics
             return new KeyValuePair<float, float>(myRotation, hitShift);
         }
 
-
-        [HarmonyPatch(typeof(Stats), "TakeDamage", new Type[] { typeof(DamageAttack) })]
-        public class bhaptics_StatsTakeDamage
+        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "TakeDamage", new Type[] { typeof(DamageAttack) })]
+        public class bhaptics_TakeDamage
         {
             [HarmonyPostfix]
-            public static void Postfix(Stats __instance, DamageAttack attack)
+            public static void Postfix(VitruviusVR.PlayerController __instance, DamageAttack attack)
             {
-                // damage function is for all entities
-                if (!__instance.name.Contains("Player")) { return; }
+                //tactsuitVr.LOG("TakeDamage: " + __instance.transform.rotation.eulerAngles.y.ToString());
+            }
+        }
 
+        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "TakeDamage", new Type[] { typeof(DamagableObject), typeof(DamageAttack) })]
+        public class bhaptics_TakeDamageTwo
+        {
+            [HarmonyPostfix]
+            public static void Postfix(VitruviusVR.PlayerController __instance, DamagableObject damagableObject, DamageAttack attack)
+            {
                 string feedbackKey = "Impact";
                 switch (attack.AttackDamageType)
                 {
@@ -222,13 +232,15 @@ namespace ShadowLegend_bhaptics
                         break;
                 }
 
-                tactsuitVr.LOG("Damage: " + attack.AttackDamageType.ToString());
+                //tactsuitVr.LOG("Damage: " + attack.AttackDamageType.ToString());
                 Vector3 hitPosition = attack.WorldHitPosition;
-                Transform playerPosition = __instance.transform;
+                Transform playerPosition = damagableObject.transform;
                 var angleShift = getAngleAndShift(playerPosition, hitPosition);
                 tactsuitVr.PlayBackHit(feedbackKey, angleShift.Key, angleShift.Value);
             }
         }
+
+
 
         [HarmonyPatch(typeof(VitruviusVR.PlayerController), "BurningStart", new Type[] { typeof(IncendiaryObject) })]
         public class bhaptics_Burning
@@ -242,6 +254,8 @@ namespace ShadowLegend_bhaptics
         }
 
         #endregion
+
+        #region World Interaction
 
         [HarmonyPatch(typeof(HealthNumber), "HealthChange", new Type[] { typeof(int) })]
         public class bhaptics_PlayerHealth
@@ -270,7 +284,7 @@ namespace ShadowLegend_bhaptics
         public class bhaptics_FootStep
         {
             [HarmonyPostfix]
-            public static void Postfix(bool landingFromFalling)
+            public static void Postfix(PlayerMovementController __instance, bool landingFromFalling)
             {
                 if (rightFoot)
                 {
@@ -296,6 +310,82 @@ namespace ShadowLegend_bhaptics
             }
         }
 
+        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "Heal", new Type[] { typeof(int) })]
+        public class bhaptics_HealPlayer
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("Healing");
+            }
+        }
+
+        [HarmonyPatch(typeof(VitruviusVR.Eatable), "Eat", new Type[] {  })]
+        public class bhaptics_Eating
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("Eating");
+            }
+        }
+
+        #endregion
+
+        #region Gargoyle
+
+        [HarmonyPatch(typeof(VitruviusVR.GargoyleBossDealLightningDamageAction), "DealDamageToPlayer", new Type[] { typeof(GargoyleBossStateController) })]
+        public class bhaptics_GargoyleLightning
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("Electrocution");
+            }
+        }
+
+        [HarmonyPatch(typeof(VitruviusVR.GargoyleBossRockProjectile), "Explode", new Type[] {  })]
+        public class bhaptics_GargoyleRockExplode
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("ExplosionBelly");
+            }
+        }
+
+        [HarmonyPatch(typeof(VitruviusVR.GargoyleBossFightController), "BossLand", new Type[] { })]
+        public class bhaptics_GargoyleLand
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("StompBelly");
+            }
+        }
+
+        [HarmonyPatch(typeof(VitruviusVR.GargoyleBossFightController), "PillarDestroyed", new Type[] { })]
+        public class bhaptics_GargoylePillarDestroyed
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("NeckTingleShort");
+            }
+        }
+
+        [HarmonyPatch(typeof(VitruviusVR.GargoyleBossFightController), "Footstep", new Type[] { typeof(Vector3) })]
+        public class bhaptics_GargoyleFootStep
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                tactsuitVr.PlaybackHaptics("StompBelly");
+            }
+        }
+
+
+        #endregion
 
     }
 }
