@@ -54,6 +54,8 @@ namespace ShadowLegend_bhaptics
   - [MelonLoader/Harmony Patching](https://github.com/TDToolbox/BTD-Docs/blob/master/Unity%20Engine/MelonLoader/Harmony%20Patching.md)
   - [Harmony basics](https://api.raftmodding.com/modding-tutorials/harmony-basics)
 
+10. A good part of modding a game is making cool patterns. And if you have not here found it, here is the bhaptics site to do this: [https://designer.bhaptics.com/](https://designer.bhaptics.com/). Just log in using your normal bhaptics account and export the .tact files to your local bHaptics directory in your `Mods` folder.
+
 ## Testing and publishing the mod
 
 Make sure your mod is working properly and test it with other people. If you feel like it is good to publish, pick a site and upload it. I use NexusMods, which has gotten a bit of critique lately because modders aren't able to delete their old mods anymore if they are part of a compilation. And you need a (free) account to download mods there. But I haven't found a great alternative yet that doesn't have its own issues like aggressive mod managers or tons of ads everywhere. Oh well.
