@@ -11,9 +11,9 @@ namespace MyBhapticsTactsuit
     {
         public bool suitDisabled = true;
         public bool systemInitialized = false;
+        // Event to start and stop the heartbeat thread
         private static ManualResetEvent HeartBeat_mrse = new ManualResetEvent(false);
-        private static ManualResetEvent Water_mrse = new ManualResetEvent(false);
-        private static ManualResetEvent Choking_mrse = new ManualResetEvent(false);
+        // dictionary of all feedback patterns found in the bHaptics directory
         public Dictionary<String, FileInfo> FeedbackMap = new Dictionary<String, FileInfo>();
 
         private static bHaptics.RotationOption defaultRotationOption = new bHaptics.RotationOption(0.0f, 0.0f);
@@ -22,29 +22,10 @@ namespace MyBhapticsTactsuit
         {
             while (true)
             {
+                // Check if reset event is active
                 HeartBeat_mrse.WaitOne();
                 bHaptics.SubmitRegistered("HeartBeat");
                 Thread.Sleep(600);
-            }
-        }
-
-        public void WaterFunc()
-        {
-            while (true)
-            {
-                Water_mrse.WaitOne();
-                bHaptics.SubmitRegistered("WaterSlushing");
-                Thread.Sleep(5050);
-            }
-        }
-
-        public void ChokingFunc()
-        {
-            while (true)
-            {
-                Choking_mrse.WaitOne();
-                bHaptics.SubmitRegistered("Choking");
-                Thread.Sleep(1050);
             }
         }
 
@@ -59,23 +40,20 @@ namespace MyBhapticsTactsuit
             LOG("Starting HeartBeat and NeckTingle thread...");
             Thread HeartBeatThread = new Thread(HeartBeatFunc);
             HeartBeatThread.Start();
-            Thread WaterThread = new Thread(WaterFunc);
-            WaterThread.Start();
-            Thread ChokingThread = new Thread(ChokingFunc);
-            ChokingThread.Start();
         }
 
         public void LOG(string logStr)
         {
-#pragma warning disable CS0618 // Typ oder Element ist veraltet
+#pragma warning disable CS0618 // remove warning that the logger is deprecated
             MelonLogger.Msg(logStr);
-#pragma warning restore CS0618 // Typ oder Element ist veraltet
+#pragma warning restore CS0618
         }
 
 
 
         void RegisterAllTactFiles()
         {
+            // Get location of the compiled assembly and search through "bHaptics" directory and contained patterns
             string configPath = Directory.GetCurrentDirectory() + "\\Mods\\bHaptics";
             DirectoryInfo d = new DirectoryInfo(configPath);
             FileInfo[] Files = d.GetFiles("*.tact", SearchOption.AllDirectories);
@@ -98,7 +76,6 @@ namespace MyBhapticsTactsuit
                 FeedbackMap.Add(prefix, Files[i]);
             }
             systemInitialized = true;
-            //PlaybackHaptics("HeartBeat");
         }
 
         public void PlaybackHaptics(String key, float intensity = 1.0f, float duration = 1.0f)
@@ -120,6 +97,9 @@ namespace MyBhapticsTactsuit
 
         public void PlayBackHit(String key, float xzAngle, float yShift)
         {
+            // two parameters can be given to the pattern to move it on the vest:
+            // 1. An angle in degrees [0, 360] to turn the pattern to the left
+            // 2. A shift [-0.5, 0.5] in y-direction (up and down) to move it up or down
             bHaptics.ScaleOption scaleOption = new bHaptics.ScaleOption(1f, 1f);
             bHaptics.RotationOption rotationOption = new bHaptics.RotationOption(xzAngle, yShift);
             bHaptics.SubmitRegistered(key, key, scaleOption, rotationOption);

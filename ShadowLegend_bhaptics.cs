@@ -18,7 +18,6 @@ namespace ShadowLegend_bhaptics
         private static PlayerHand rightHand;
         private static bool weaponRightHand = true;
         private static bool arrowFromCrossBow = false;
-        private static bool staffRightHand = true;
         private static bool rightFoot = true;
 
 
@@ -47,11 +46,12 @@ namespace ShadowLegend_bhaptics
             [HarmonyPostfix]
             public static void Postfix(PlayerMeleeDamage __instance)
             {
+                // getting information on which hand is used can sometimes be a pain. Beware!
                 bool isRightHand = __instance.PlayerWeapon.Hand.Equals(rightHand);
                 float weaponSpeed = __instance.PlayerWeapon.WeaponTipVelocity.magnitude;
+                // scale intensity from speed [0, 80] to [0.5, 1], cap at 1.0
                 float intensity = Math.Min(((weaponSpeed / 80f) + 0.5f), 1.0f);
                 tactsuitVr.Recoil("Blade", isRightHand, intensity);
-                //tactsuitVr.LOG("MeleeDamage: " + weaponSpeed.ToString());
             }
         }
 
@@ -61,6 +61,8 @@ namespace ShadowLegend_bhaptics
             [HarmonyPostfix]
             public static void Postfix(PlayerHand hand)
             {
+                // here is an example: The shoot cannon function does not have a reference to any hand.
+                // So I am saving which hand grabbed it...
                 weaponRightHand = hand.Equals(rightHand);
             }
         }
@@ -72,7 +74,6 @@ namespace ShadowLegend_bhaptics
             public static void Postfix()
             {
                 tactsuitVr.Recoil("Cannon", weaponRightHand);
-                //tactsuitVr.LOG("MeleeDamage: " + weaponSpeed.ToString());
             }
         }
 
@@ -82,7 +83,10 @@ namespace ShadowLegend_bhaptics
             [HarmonyPostfix]
             public static void Postfix(PlayerHand hand)
             {
+                // Again, not shoot function does not know the hand, so I am saving it internally
                 weaponRightHand = hand.Equals(rightHand);
+                // There is no Bow function to hook into. So I use the arrow shoot function, but not when
+                // shooting with the crossbow. So remember if I am using the crossbow
                 arrowFromCrossBow = true;
             }
         }
@@ -94,10 +98,9 @@ namespace ShadowLegend_bhaptics
             [HarmonyPostfix]
             public static void Postfix()
             {
-                // right hand is where arrow was
+                // right hand is where arrow was, so fire from not rightHand
                 tactsuitVr.Recoil("Gun", !weaponRightHand);
                 arrowFromCrossBow = false;
-                //tactsuitVr.LOG("MeleeDamage: " + weaponSpeed.ToString());
             }
         }
 
@@ -150,7 +153,6 @@ namespace ShadowLegend_bhaptics
             public static void Postfix(Staff __instance, PlayerHand hand)
             {
                 bool isRightHand = hand.Equals(rightHand);
-                staffRightHand = isRightHand;
                 if (__instance.IsReadyToShoot) { tactsuitVr.Recoil("Blade", isRightHand); }
             }
         }
@@ -161,54 +163,50 @@ namespace ShadowLegend_bhaptics
 
         private static KeyValuePair<float, float> getAngleAndShift(Transform player, Vector3 hit)
         {
-            // bhaptics starts in the front, then rotates to the left. 0° is front, 90° is left, 270° is right.
-            Vector3 patternOrigin = new Vector3(0f, 0f, 1f);
+            // bhaptics pattern starts in the front, then rotates to the left. 0° is front, 90° is left, 270° is right.
             // y is "up", z is "forward" in local coordinates
+            Vector3 patternOrigin = new Vector3(0f, 0f, 1f);
             Vector3 hitPosition = hit - player.position;
-            //tactsuitVr.LOG("Relative x-z-position: " + hitPosition.x.ToString() + " " + hitPosition.z.ToString());
             Quaternion myPlayerRotation = player.rotation;
             Vector3 playerDir = myPlayerRotation.eulerAngles;
-            //tactsuitVr.LOG("PlayerDir: " + playerDir.y.ToString());
-            //tactsuitVr.LOG("PlayerRot: " + playerRotation.ToString());
+            // get rid of the up/down component to analyze xz-rotation
             Vector3 flattenedHit = new Vector3(hitPosition.x, 0f, hitPosition.z);
-            float earlyhitAngle = Vector3.Angle(flattenedHit, patternOrigin);
-            Vector3 earlycrossProduct = Vector3.Cross(flattenedHit, patternOrigin);
-            if (earlycrossProduct.y > 0f) { earlyhitAngle *= -1f; }
-            //tactsuitVr.LOG("EarlyHitAngle: " + earlyhitAngle.ToString());
-            //float myRotation = earlyhitAngle - playerRotation;
-            float myRotation = earlyhitAngle - playerDir.y;
+
+            // get angle. .Net < 4.0 does not have a "SignedAngle" function...
+            float hitAngle = Vector3.Angle(flattenedHit, patternOrigin);
+            // check if cross product points up or down, to make signed angle myself
+            Vector3 crossProduct = Vector3.Cross(flattenedHit, patternOrigin);
+            if (crossProduct.y > 0f) { hitAngle *= -1f; }
+            // relative to player direction
+            float myRotation = hitAngle - playerDir.y;
+            // switch directions (bhaptics angles are in mathematically negative direction)
             myRotation *= -1f;
+            // convert signed angle into [0, 360] rotation
             if (myRotation < 0f) { myRotation = 360f + myRotation; }
-            //tactsuitVr.LOG("myHitAngle: " + myRotation.ToString());
 
 
+            // up/down shift is in y-direction
+            // in Shadow Legend, the torso Transform has y=0 at the neck,
+            // and the torso ends at roughly -0.5 (that's in meters)
+            // so cap the shift to [-0.5, 0]...
             float hitShift = hitPosition.y;
-            //tactsuitVr.LOG("HitShift: " + hitShift.ToString());
-            if (hitShift > 0f) { hitShift = 0.5f; }
-            else if (hitShift < -0.5f) { hitShift = -0.5f; }
-            else { hitShift = (hitShift + 0.5f) * 2f - 0.5f; }
-            //tactsuitVr.LOG("HitShift: " + hitShift.ToString());
-            //tactsuitVr.LOG(" ");
+            float upperBound = 0.0f;
+            float lowerBound = -0.5f;
+            if (hitShift > upperBound) { hitShift = 0.5f; }
+            else if (hitShift < lowerBound) { hitShift = -0.5f; }
+            // ...and then spread/shift it to [-0.5, 0.5]
+            else { hitShift = (hitShift - lowerBound) / (upperBound - lowerBound) - 0.5f; }
 
             //tactsuitVr.LOG("Relative x-z-position: " + relativeHitDir.x.ToString() + " "  + relativeHitDir.z.ToString());
             //tactsuitVr.LOG("HitAngle: " + hitAngle.ToString());
             //tactsuitVr.LOG("HitShift: " + hitShift.ToString());
 
+            // No tuple returns available in .NET < 4.0, so this is the easiest quickfix
             return new KeyValuePair<float, float>(myRotation, hitShift);
         }
 
-        [HarmonyPatch(typeof(VitruviusVR.PlayerController), "TakeDamage", new Type[] { typeof(DamageAttack) })]
-        public class bhaptics_TakeDamage
-        {
-            [HarmonyPostfix]
-            public static void Postfix(VitruviusVR.PlayerController __instance, DamageAttack attack)
-            {
-                //tactsuitVr.LOG("TakeDamage: " + __instance.transform.rotation.eulerAngles.y.ToString());
-            }
-        }
-
         [HarmonyPatch(typeof(VitruviusVR.PlayerController), "TakeDamage", new Type[] { typeof(DamagableObject), typeof(DamageAttack) })]
-        public class bhaptics_TakeDamageTwo
+        public class bhaptics_TakeDamage
         {
             [HarmonyPostfix]
             public static void Postfix(VitruviusVR.PlayerController __instance, DamagableObject damagableObject, DamageAttack attack)
@@ -232,7 +230,6 @@ namespace ShadowLegend_bhaptics
                         break;
                 }
 
-                //tactsuitVr.LOG("Damage: " + attack.AttackDamageType.ToString());
                 Vector3 hitPosition = attack.WorldHitPosition;
                 Transform playerPosition = damagableObject.transform;
                 var angleShift = getAngleAndShift(playerPosition, hitPosition);
@@ -249,7 +246,7 @@ namespace ShadowLegend_bhaptics
             public static void Postfix()
             {
                 tactsuitVr.PlaybackHaptics("Burning");
-                tactsuitVr.LOG("BurningStart");
+                //tactsuitVr.LOG("BurningStart");
             }
         }
 
@@ -265,7 +262,6 @@ namespace ShadowLegend_bhaptics
             {
                 if (currentHealth < 30) { tactsuitVr.StartHeartBeat(); }
                 else { tactsuitVr.StopHeartBeat(); }
-                //tactsuitVr.LOG("Heal: " + currentHealth.ToString());
             }
         }
 
