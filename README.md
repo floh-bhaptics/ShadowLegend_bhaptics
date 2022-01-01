@@ -54,7 +54,7 @@ namespace ShadowLegend_bhaptics
   - [MelonLoader/Harmony Patching](https://github.com/TDToolbox/BTD-Docs/blob/master/Unity%20Engine/MelonLoader/Harmony%20Patching.md)
   - [Harmony basics](https://api.raftmodding.com/modding-tutorials/harmony-basics)
 
-10. A good part of modding a game is making cool patterns. And if you have not here found it, here is the bhaptics site to do this: [https://designer.bhaptics.com/](https://designer.bhaptics.com/). Just log in using your normal bhaptics account and export the .tact files to your local bHaptics directory in your `Mods` folder.
+10. A good part of modding a game is making cool patterns. And if you have not yet found it, here is the bhaptics site to do this: [https://designer.bhaptics.com/](https://designer.bhaptics.com/). Just log in using your normal bhaptics account and export the .tact files to your local bHaptics directory in your `Mods` folder.
 
 ## Testing and publishing the mod
 
