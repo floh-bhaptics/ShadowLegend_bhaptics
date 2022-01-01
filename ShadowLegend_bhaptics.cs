@@ -23,17 +23,32 @@ namespace ShadowLegend_bhaptics
 
         public override void OnApplicationStart()
         {
+            // Melonloader will initialize the bHaptics player
+            // and call PatchAll() for the HarmonyLib to hook into all functions you added
             base.OnApplicationStart();
+            // make our tactsuit instance
             tactsuitVr = new TactsuitVR();
+            // play back one single heart beat to show the user that the mod loaded correctly
             tactsuitVr.PlaybackHaptics("HeartBeat");
         }
 
+        // Simple example for a HarmonyLib hook: As parameters, you need
+        // 1. The class to hook into
+        // 2. The method name to hook into. Will crash if not precisely the same
+        // 3. A Type[] array of the parameters of that method. This isn't always necessary, but
+        //    when methods are overloaded, HarmonyLib will sometimes guess the wrong one
         [HarmonyPatch(typeof(VitruviusVR.PlayerController), "OnEnable", new Type[] { })]
         public class bhaptics_EnablePlayerController
         {
+            // Postfix means that this will run *after* the method is calles. Very much
+            // recommended unless you want to tinker with the parameters given to the method.
             [HarmonyPostfix]
+            // In addition to the underlying class as "__instance", you can add parameters
+            // here that you need in the function. Types and names have to match the original exactly.
             public static void Postfix(VitruviusVR.PlayerController __instance)
             {
+                // Save right hand on startup because there is nothing like "isRightHand" in
+                // the handle methods of this game.
                 rightHand = __instance.CurrentRightHand;
             }
         }

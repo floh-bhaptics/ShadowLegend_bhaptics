@@ -9,6 +9,12 @@ namespace MyBhapticsTactsuit
 {
     public class TactsuitVR
     {
+        /* A class that contains the basic functions for the bhaptics Tactsuit, like:
+         * - A Heartbeat function that can be turned on/off
+         * - A function to read in and register all .tact patterns in the bHaptics subfolder
+         * - A logging hook to output to the Melonloader log
+         * - 
+         * */
         public bool suitDisabled = true;
         public bool systemInitialized = false;
         // Event to start and stop the heartbeat thread
@@ -37,7 +43,7 @@ namespace MyBhapticsTactsuit
                 suitDisabled = false;
             }
             RegisterAllTactFiles();
-            LOG("Starting HeartBeat and NeckTingle thread...");
+            LOG("Starting HeartBeat thread...");
             Thread HeartBeatThread = new Thread(HeartBeatFunc);
             HeartBeatThread.Start();
         }
@@ -107,52 +113,34 @@ namespace MyBhapticsTactsuit
 
         public void Recoil(string weaponName, bool isRightHand, float intensity = 1.0f)
         {
+            // weaponName is a parameter that will go into the vest feedback pattern name
+            // isRightHand is just which side the feedback is on
+            // intensity should usually be between 0 and 1
+
             float duration = 1.0f;
             var scaleOption = new bHaptics.ScaleOption(intensity, duration);
+            // the function needs some rotation if you want to give the scale option as well
             var rotationFront = new bHaptics.RotationOption(0f, 0f);
+            // make postfix according to parameter
             string postfix = "_L";
             if (isRightHand) { postfix = "_R"; }
+
+            // stitch together pattern names for Arm and Hand recoil
+            string keyHands = "RecoilHands" + postfix;
             string keyArm = "Recoil" + postfix;
+            // vest pattern name contains the weapon name. This way, you can quickly switch
+            // between swords, pistols, shotguns, ... by just changing the shoulder feedback
+            // and scaling via the intensity for arms and hands
             string keyVest = "Recoil" + weaponName + "Vest" + postfix;
-            string keyHands = "RecoilHands" + postfix;
             bHaptics.SubmitRegistered(keyHands, keyHands, scaleOption, rotationFront);
             bHaptics.SubmitRegistered(keyArm, keyArm, scaleOption, rotationFront);
             bHaptics.SubmitRegistered(keyVest, keyVest, scaleOption, rotationFront);
         }
 
-
-        public void GunRecoil(bool isRightHand, float intensity = 1.0f )
-        {
-            float duration = 1.0f;
-            var scaleOption = new bHaptics.ScaleOption(intensity, duration);
-            var rotationFront = new bHaptics.RotationOption(0f, 0f);
-            string postfix = "_L";
-            if (isRightHand) { postfix = "_R"; }
-            string keyArm = "Recoil" + postfix;
-            string keyVest = "RecoilVest" + postfix;
-            string keyHands = "RecoilHands" + postfix;
-            bHaptics.SubmitRegistered(keyHands, keyHands, scaleOption, rotationFront);
-            bHaptics.SubmitRegistered(keyArm, keyArm, scaleOption, rotationFront);
-            bHaptics.SubmitRegistered(keyVest, keyVest, scaleOption, rotationFront);
-        }
-
-        public void SwordRecoil(bool isRightHand, float intensity = 1.0f)
-        {
-            float duration = 1.0f;
-            var scaleOption = new bHaptics.ScaleOption(intensity, duration);
-            var rotationFront = new bHaptics.RotationOption(0f, 0f);
-            string postfix = "_L";
-            if (isRightHand) { postfix = "_R"; }
-            string keyArm = "Sword" + postfix;
-            string keyVest = "SwordVest" + postfix;
-            string keyHands = "RecoilHands" + postfix;
-            bHaptics.SubmitRegistered(keyHands, keyHands, scaleOption, rotationFront);
-            bHaptics.SubmitRegistered(keyArm, keyArm, scaleOption, rotationFront);
-            bHaptics.SubmitRegistered(keyVest, keyVest, scaleOption, rotationFront);
-        }
 
         public void HeadShot(String key, float hitAngle)
         {
+            // I made 4 patterns in the Tactal for fron/back/left/right headshots
             if (bHaptics.IsDeviceConnected(bHaptics.DeviceType.Tactal))
             {
                 if ((hitAngle < 45f) | (hitAngle > 315f)) { PlaybackHaptics("Headshot_F"); }
@@ -160,6 +148,7 @@ namespace MyBhapticsTactsuit
                 if ((hitAngle > 135f) && (hitAngle < 225f)) { PlaybackHaptics("Headshot_B"); }
                 if ((hitAngle > 225f) && (hitAngle < 315f)) { PlaybackHaptics("Headshot_R"); }
             }
+            // If there is no Tactal, just forward to the vest  with angle and at the very top (0.5)
             else { PlayBackHit(key, hitAngle, 0.5f); }
         }
 
@@ -194,6 +183,8 @@ namespace MyBhapticsTactsuit
 
         public void StopThreads()
         {
+            // Yes, looks silly here, but if you have several threads like this, this is
+            // very useful when the player dies or starts a new level
             StopHeartBeat();
         }
 
