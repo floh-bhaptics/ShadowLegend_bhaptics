@@ -50,7 +50,9 @@ namespace ShadowLegend_bhaptics
 
 8. Now you can compile it, make sure the `Mods` directory in your game looks okay and contains your mod DLL and the bHaptics directory. Start the bhaptics Player, connect your vest and run the game. And hope for a heartbeat. ;-)
 
-9. If this works fine, you can start to search through the disassembled game file for functions that you can hook into to give feedback in the gear. You will get to know the game's code structure fairly well during the modding process, so really dive into it first. For some example functions, you can check the code in this repository, even though it is not clean and only writtern quickly and for myself...
+9. If this works fine, you can start to search through the disassembled game file for functions that you can hook into to give feedback in the gear. You will get to know the game's code structure fairly well during the modding process, so really dive into it first. For some example functions, you can check the code in this repository, even though it is not clean and only writtern quickly and for myself... I think these are the sites I used to get started with HarmonyLib:
+  - [MelonLoader/Harmony Patching](https://github.com/TDToolbox/BTD-Docs/blob/master/Unity%20Engine/MelonLoader/Harmony%20Patching.md)
+  - [Harmony basics](https://api.raftmodding.com/modding-tutorials/harmony-basics)
 
 ## Testing and publishing the mod
 
