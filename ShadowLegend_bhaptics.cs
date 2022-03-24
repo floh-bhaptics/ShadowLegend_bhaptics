@@ -248,7 +248,8 @@ namespace ShadowLegend_bhaptics
                 Vector3 hitPosition = attack.WorldHitPosition;
                 Transform playerPosition = damagableObject.transform;
                 var angleShift = getAngleAndShift(playerPosition, hitPosition);
-                tactsuitVr.PlayBackHit(feedbackKey, angleShift.Key, angleShift.Value);
+                if (angleShift.Value >= 0.5f) tactsuitVr.HeadShot(feedbackKey, angleShift.Key);
+                else tactsuitVr.PlayBackHit(feedbackKey, angleShift.Key, angleShift.Value);
             }
         }
 
